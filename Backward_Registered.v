@@ -21,44 +21,17 @@ module Backward_Registered #( parameter WIDTH = 8)(
 	output [WIDTH-1:0] s_data,
 	input s_ready
 	);
-		
-	reg s_ready_d;
-	reg m_valid_d;
-	reg [WIDTH-1:0] m_data_d;
+
 	wire s_ready_dge;
 	reg valid_skid;
 	reg [WIDTH-1:0] data_skid;
-
-	always @(posedge clk or negedge rst_n) begin
-		if (!rst_n) begin
-			s_ready_d <= 1'd0;
-		end
-		else begin
-			s_ready_d <= s_ready;
-		end
-	end
-
-	always @(posedge clk or negedge rst_n) begin
-	 	if (!rst_n)
-	 	  	m_valid_d <= 1'b0;          
-	 	else if (m_ready)
-	 	  	m_valid_d <= m_valid;         
-	 	end                                                       
-
-	always @(posedge clk or negedge rst_n) begin
-	  	if (!rst_n)
-	  	  	m_data_d <= {WIDTH{1'b0}};          
-	  	else if (m_ready)
-	  	  	m_data_d <= m_data;         
-	end                                    
-	
 
 	always @(posedge clk or negedge rst_n) begin
 	  	if (!rst_n)
 	  	  	valid_skid <= 1'b0;          
 	  	else if (valid_skid)
 	  	 	valid_skid <= ~s_ready;          
-	  	else if (s_ready_dge)
+	  	else if (~valid_skid^s_ready)
 	  	  	valid_skid <= m_valid;    //buffer_skid中有数据有效信号
 	end                           
 	  
@@ -66,16 +39,13 @@ module Backward_Registered #( parameter WIDTH = 8)(
 	always @(posedge clk or negedge rst_n) begin
 	  	if (!rst_n)
 	  	  	data_skid <= {WIDTH{1'b0}};           
-	  	else if (valid_skid)
-	  	  	data_skid <=  s_ready ? {WIDTH{1'b0}}: data_skid;         
-	  	else if (s_ready_dge)
-	  	  	data_skid <= m_data_d;      
+	  	else
+	  	  	data_skid <= valid_skid ? data_skid: m_data;      
 	end 
 	
 	
-	assign  s_valid = valid_skid || m_valid_d;        
-	assign  s_data = valid_skid ? data_skid : m_data_d;    
-	assign  m_ready = s_ready_d ;    
-	assign s_ready_dge = s_ready ^ s_ready_d;        
+	assign  s_valid = valid_skid | m_valid;        
+	assign  s_data = valid_skid ? data_skid : m_data;    
+	assign  m_ready = ~valid_skid ;    
 
 endmodule 
